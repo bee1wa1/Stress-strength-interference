@@ -10,7 +10,7 @@ st.title("Stress–Strength Interference — Reliability Calculator")
 st.caption("Compute R = P(Strength > Stress) for a choice of distributions.")
 
 # -------- Helpers --------
-DIST_NAMES = ["Weibull", "Normal", "Lognormal", "Exponential"]
+DIST_NAMES = ["Normal", "Weibull", "Lognormal", "Exponential"]
 
 def dist_params_ui(side_label: str):
     st.subheader(f"{side_label} distribution")
@@ -20,12 +20,11 @@ def dist_params_ui(side_label: str):
         key=f"{side_label}_dist",
     )
 
-
     if name == "Normal":
         # Set different defaults for Stress vs Strength
-        default_mu = 10.0 if side_label == "Stress" else 20.0
+        default_mu = 10.0 if side_label == "Stress" else 15.0
         default_sigma = 2.0
-    
+
         mu = st.number_input(
             f"{side_label} Normal mean μ",
             value=default_mu,
@@ -42,21 +41,27 @@ def dist_params_ui(side_label: str):
         return name, {"mu": mu, "sigma": sigma}
 
     if name == "Weibull":
-        k = st.number_input(f"{side_label} Weibull shape k (>0)", min_value=1e-6, value=2.0, step=0.1, key=f"{side_label}_wb_k")
-        scale = st.number_input(f"{side_label} Weibull scale λ (>0)", min_value=1e-9, value=10.0, step=0.5, key=f"{side_label}_wb_scale")
+        k = st.number_input(f"{side_label} Weibull shape k (>0)", min_value=1e-6, value=2.0, step=0.1,
+                            key=f"{side_label}_wb_k")
+        scale = st.number_input(f"{side_label} Weibull scale λ (>0)", min_value=1e-9, value=10.0, step=0.5,
+                                key=f"{side_label}_wb_scale")
         return name, {"k": k, "scale": scale}
 
     if name == "Lognormal":
-        mu = st.number_input(f"{side_label} Lognormal log-mean μ (of ln X)", value=2.0, step=0.1, key=f"{side_label}_ln_mu")
-        sigma = st.number_input(f"{side_label} Lognormal log-std σ (>0)", min_value=1e-9, value=0.5, step=0.05, key=f"{side_label}_ln_sigma")
+        mu = st.number_input(f"{side_label} Lognormal log-mean μ (of ln X)", value=2.0, step=0.1,
+                             key=f"{side_label}_ln_mu")
+        sigma = st.number_input(f"{side_label} Lognormal log-std σ (>0)", min_value=1e-9, value=0.5, step=0.05,
+                                key=f"{side_label}_ln_sigma")
         return name, {"mu": mu, "sigma": sigma}
 
     if name == "Exponential":
-        mean = st.number_input(f"{side_label} Exponential mean (scale) (>0)", min_value=1e-12, value=10.0, step=0.5, key=f"{side_label}_exp_scale")
+        mean = st.number_input(f"{side_label} Exponential mean (scale) (>0)", min_value=1e-12, value=10.0, step=0.5,
+                               key=f"{side_label}_exp_scale")
         return name, {"scale": mean}
 
     # fallback
     return name, {}
+
 
 def make_frozen(name: str, params: dict):
     if name == "Weibull":
@@ -72,6 +77,7 @@ def make_frozen(name: str, params: dict):
         return stats.expon(scale=params["scale"])
     raise ValueError("Unsupported distribution")
 
+
 def reliability_integral(stress_rv, strength_rv):
     # R = ∫ f_X(x) * (1 - F_Y(x)) dx over (-inf, +inf)
     # SciPy handles the tails with infinite bounds
@@ -80,22 +86,24 @@ def reliability_integral(stress_rv, strength_rv):
     # numerical guard
     return float(np.clip(val, 0.0, 1.0))
 
-def support_bounds(rvs, q_lo=1e-4, q_hi=1-1e-4):
+
+def support_bounds(rvs, q_lo=1e-4, q_hi=1 - 1e-4):
     # Combined plotting window across both distributions
     qs = []
     for rv in rvs:
         try:
             qs.append(rv.ppf([q_lo, q_hi]))
         except Exception:
-            qs.append(np.array([rv.mean() - 4*rv.std(), rv.mean() + 4*rv.std()]))
+            qs.append(np.array([rv.mean() - 4 * rv.std(), rv.mean() + 4 * rv.std()]))
     arr = np.vstack(qs)
-    lo = float(np.nanmin(arr[:,0]))
-    hi = float(np.nanmax(arr[:,1]))
+    lo = float(np.nanmin(arr[:, 0]))
+    hi = float(np.nanmax(arr[:, 1]))
     if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
         lo, hi = -10.0, 10.0
     # widen a bit
     span = hi - lo
-    return lo - 0.05*span, hi + 0.05*span
+    return lo - 0.05 * span, hi + 0.05 * span
+
 
 # -------- UI --------
 left, right = st.columns(2)
@@ -111,6 +119,23 @@ with st.expander("Monte Carlo (optional)", expanded=False):
     n_mc = st.number_input("Samples (0 to skip MC)", min_value=0, value=0, step=10000)
     rng_seed = st.number_input("Random seed", value=42, step=1)
 
+# Custom CSS for yellow button
+st.markdown(
+    """
+    <style>
+    div.stButton > button:first-child {
+        background-color: #FFD700; /* yellow (gold) */
+        color: black; /* text color */
+        font-weight: bold;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #FFC300; /* darker yellow on hover */
+        color: black;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 # Compute button
 if st.button("Compute reliability"):
     try:
@@ -119,7 +144,7 @@ if st.button("Compute reliability"):
 
         R = reliability_integral(stress_rv, strength_rv)
 
-        st.success(f"Reliability R = P(Strength > Stress) = **{R:.6f}**  ({R*100:.4f}%)")
+        st.success(f"Reliability R = P(Strength > Stress) = **{R:.6f}**  ({R * 100:.4f}%)")
 
         # Monte Carlo check
         if n_mc and n_mc > 0:
@@ -127,8 +152,8 @@ if st.button("Compute reliability"):
             x = stress_rv.rvs(size=int(n_mc), random_state=rng)
             y = strength_rv.rvs(size=int(n_mc), random_state=rng)
             r_mc = np.mean(y > x)
-            se = np.sqrt(max(r_mc*(1-r_mc), 1e-16)/n_mc)
-            st.info(f"Monte Carlo estimate with n={int(n_mc):,}: **{r_mc:.6f}** (± {1.96*se:.6f} at 95%)")
+            se = np.sqrt(max(r_mc * (1 - r_mc), 1e-16) / n_mc)
+            st.info(f"Monte Carlo estimate with n={int(n_mc):,}: **{r_mc:.6f}** (± {1.96 * se:.6f} at 95%)")
 
         # Plot PDFs
         lo, hi = support_bounds([stress_rv, strength_rv])
@@ -146,6 +171,7 @@ if st.button("Compute reliability"):
         ax.grid(True, alpha=0.3)
         st.pyplot(fig)
 
+
         # Small table of summary stats
         def stats_summary(rv):
             m = rv.mean()
@@ -153,12 +179,13 @@ if st.button("Compute reliability"):
             s = rv.std()
             return float(m), float(s), float(v)
 
+
         s_mu, s_sd, s_var = stats_summary(stress_rv)
         str_mu, str_sd, str_var = stats_summary(strength_rv)
 
         st.markdown("**Summary statistics**")
         st.write({
-            "Stress":   {"mean": s_mu, "std": s_sd, "var": s_var},
+            "Stress": {"mean": s_mu, "std": s_sd, "var": s_var},
             "Strength": {"mean": str_mu, "std": str_sd, "var": str_var},
         })
 
@@ -170,4 +197,3 @@ if st.button("Compute reliability"):
 else:
     st.markdown("Configure the distributions and click **Compute reliability**.")
     st.caption("Weibull: shape k, scale λ · Lognormal inputs are for ln(X): μ, σ · Exponential uses mean (scale).")
-
