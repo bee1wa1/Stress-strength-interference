@@ -20,15 +20,31 @@ def dist_params_ui(side_label: str):
         key=f"{side_label}_dist",
     )
 
+
+    if name == "Normal":
+        # Set different defaults for Stress vs Strength
+        default_mu = 10.0 if side_label == "Stress" else 20.0
+        default_sigma = 2.0
+    
+        mu = st.number_input(
+            f"{side_label} Normal mean μ",
+            value=default_mu,
+            step=0.5,
+            key=f"{side_label}_n_mu"
+        )
+        sigma = st.number_input(
+            f"{side_label} Normal std σ (>0)",
+            min_value=1e-9,
+            value=default_sigma,
+            step=0.1,
+            key=f"{side_label}_n_sigma"
+        )
+        return name, {"mu": mu, "sigma": sigma}
+
     if name == "Weibull":
         k = st.number_input(f"{side_label} Weibull shape k (>0)", min_value=1e-6, value=2.0, step=0.1, key=f"{side_label}_wb_k")
         scale = st.number_input(f"{side_label} Weibull scale λ (>0)", min_value=1e-9, value=10.0, step=0.5, key=f"{side_label}_wb_scale")
         return name, {"k": k, "scale": scale}
-
-    if name == "Normal":
-        mu = st.number_input(f"{side_label} Normal mean μ", value=10.0, step=0.5, key=f"{side_label}_n_mu")
-        sigma = st.number_input(f"{side_label} Normal std σ (>0)", min_value=1e-9, value=2.0, step=0.1, key=f"{side_label}_n_sigma")
-        return name, {"mu": mu, "sigma": sigma}
 
     if name == "Lognormal":
         mu = st.number_input(f"{side_label} Lognormal log-mean μ (of ln X)", value=2.0, step=0.1, key=f"{side_label}_ln_mu")
@@ -154,3 +170,4 @@ if st.button("Compute reliability"):
 else:
     st.markdown("Configure the distributions and click **Compute reliability**.")
     st.caption("Weibull: shape k, scale λ · Lognormal inputs are for ln(X): μ, σ · Exponential uses mean (scale).")
+
