@@ -78,12 +78,19 @@ def make_frozen(name: str, params: dict):
     raise ValueError("Unsupported distribution")
 
 
+# def reliability_integral(stress_rv, strength_rv):
+#     # R = ∫ f_X(x) * (1 - F_Y(x)) dx over (-inf, +inf)
+#     # SciPy handles the tails with infinite bounds
+#     integrand = lambda x: stress_rv.pdf(x) * (1.0 - strength_rv.cdf(x))
+#     val, _ = quad(integrand, -np.inf, np.inf, limit=300, epsabs=1e-9, epsrel=1e-8)
+#     # numerical guard
+#     return float(np.clip(val, 0.0, 1.0))
 def reliability_integral(stress_rv, strength_rv):
-    # R = ∫ f_X(x) * (1 - F_Y(x)) dx over (-inf, +inf)
-    # SciPy handles the tails with infinite bounds
-    integrand = lambda x: stress_rv.pdf(x) * (1.0 - strength_rv.cdf(x))
-    val, _ = quad(integrand, -np.inf, np.inf, limit=300, epsabs=1e-9, epsrel=1e-8)
-    # numerical guard
+    # R = ∫ f_X(x) * S_Y(x) dx, where S_Y(x) = 1 - F_Y(x)
+    integrand = lambda x: stress_rv.pdf(x) * strength_rv.sf(x)
+    # integrate over the effective support of STRESS
+    lo, hi = stress_rv.ppf([1e-12, 1 - 1e-12])
+    val, _ = quad(integrand, lo, hi, limit=300, epsabs=1e-12, epsrel=1e-10)
     return float(np.clip(val, 0.0, 1.0))
 
 
